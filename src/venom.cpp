@@ -11,12 +11,22 @@ typedef HRESULT(__stdcall* Present)(IDXGISwapChain* pSwapChain, UINT SyncInterva
 
 Present oPresent = NULL;
 WNDPROC oWndProc;
+bool showMenu = true;
 
-LRESULT __stdcall WndProc(const HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+LRESULT __stdcall WndProc(const HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    if (ImGui_ImplWin32_WndProcHandler(hWnd, Msg, wParam, lParam))
+    switch (msg) {
+    case WM_KEYUP:
+        switch (wParam) {
+        case VK_F5:
+            showMenu = !showMenu;
+            break;
+        }
+        break;
+    }
+    if (showMenu && ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
         return true;
-    return CallWindowProc(oWndProc, hWnd, Msg, wParam, lParam);
+    return CallWindowProc(oWndProc, hWnd, msg, wParam, lParam);
 }
 
 HRESULT __stdcall hkPresent11(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
@@ -54,31 +64,33 @@ HRESULT __stdcall hkPresent11(IDXGISwapChain* pSwapChain, UINT SyncInterval, UIN
         init = true;
     }
 
-    ImGui_ImplDX11_NewFrame();
-    ImGui_ImplWin32_NewFrame();
-    ImGui::NewFrame();
+    if (showMenu) {
+        ImGui_ImplDX11_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
 
-    // Relpace this block with your code.
-    {
-        static bool show_demo_window = false;
-        static ImVec4 color = ImVec4(0.788f, 0.00f, 0.259f, 1.00f);
+        // Relpace this block with your code.
+        {
+            static bool show_demo_window = false;
+            static ImVec4 color = ImVec4(0.788f, 0.00f, 0.259f, 1.00f);
 
-        ImGui::Begin("venom");
+            ImGui::Begin("venom");
 
-        ImGui::Text("Hello World");
-        ImGui::Checkbox("show ImGui demo window", &show_demo_window);
-        ImGui::ColorEdit3("color", (float*)&color);
-        ImGui::Text("average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::Text("Hello World");
+            ImGui::Checkbox("show ImGui demo window", &show_demo_window);
+            ImGui::ColorEdit3("color", (float*)&color);
+            ImGui::Text("average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-        ImGui::End();
+            ImGui::End();
 
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
+            if (show_demo_window)
+                ImGui::ShowDemoWindow(&show_demo_window);
+        }
+
+        ImGui::Render();
+        context->OMSetRenderTargets(1, &mainRenderTargetView, NULL);
+        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
     }
-
-    ImGui::Render();
-    context->OMSetRenderTargets(1, &mainRenderTargetView, NULL);
-    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
     return oPresent(pSwapChain, SyncInterval, Flags);
 }
 
